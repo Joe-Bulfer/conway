@@ -1,6 +1,6 @@
-//after 8-possible-states.c, I realized this had to be a 2d matrix/grid and render both alive and unalive cells
+//after 8-possible-states.c, I realized this had to be a 2d matrix/grid and render both alive and unalive cells. first place some cells, then press n key for neighbor count of whatever cell your mouse is on.
 /*
-gcc checkForNeighbors.c -o checkForNeighbors -I ../projects/raylib-quickstart/build/external/raylib-master/src/ -L ../projects/raylib-quickstart/bin/Debug/ -lraylib -lm -lpthread -ldl -lX11 && ./checkForNeighbors
+gcc 2d-matrix.c -o 2d-matrix -I ../projects/raylib-quickstart/build/external/raylib-master/src/ -L ../projects/raylib-quickstart/bin/Debug/ -lraylib -lm -lpthread -ldl -lX11 && ./2d-matrix
 */
 
 #include <raylib.h>
@@ -9,53 +9,36 @@ gcc checkForNeighbors.c -o checkForNeighbors -I ../projects/raylib-quickstart/bu
 #include <string.h>//for memset
 #define BLOCK_SIZE 20
 #define CURSOR_COLOR (Color){255, 5, 5, 128}
+#define COLS 50
+#define ROWS 50
 
-typedef struct Cell{//not used yet
+typedef struct Cell{//for world
     int alive;
     int neighbors;
+    int x, y;
 }Cell;
-struct Block{//not used yet
-    int alive;
-    int neighbors;
-    Vector2 pos;
-};
 
-//remove this and do a 2d matrix instead
-bool CheckForNeighbors(Rectangle blockA, Rectangle blockB){
-    if (blockA.y==blockB.y && blockA.x==blockB.x+BLOCK_SIZE){//isLeft
-        return true;
-    }
-    if (blockA.y==blockB.y && blockA.x+BLOCK_SIZE==blockB.x){//isRight
-        return true;
-    }
-    if (blockA.x==blockB.x && blockA.y==blockB.y+BLOCK_SIZE){//isTop
-        return true;
-    }
-    if (blockA.x==blockB.x && blockA.y+BLOCK_SIZE==blockB.y){//isBottom
-        return true;
-    }
-    if (blockA.x==blockB.x-BLOCK_SIZE && blockA.y==blockB.y-BLOCK_SIZE){//isBottomRight
-        return true;
-    }
-    if (blockA.x==blockB.x-BLOCK_SIZE && blockA.y==blockB.y+BLOCK_SIZE){//isTopRight
-        return true;
-    }
-    if (blockA.x==blockB.x+BLOCK_SIZE && blockA.y==blockB.y+BLOCK_SIZE){//isTopLeft
-        return true;
-    }
-    if (blockA.x==blockB.x+BLOCK_SIZE && blockA.y==blockB.y-BLOCK_SIZE){//isBottomLeft
-        return true;
-    }
-    return false;
+//return number of neighbors for given cell (where the mouse in hovering)
+//todo: add diagnal remaining 4 
+int ReturnNeighborCount(Cell cell, Cell world[COLS][ROWS]){
+    int neighbors = 0;
+    if (world[cell.x-1][cell.y].alive) neighbors++;//left
+    if (world[cell.x+1][cell.y].alive) neighbors++;//right
+    if (world[cell.x][cell.y-1].alive) neighbors++;//up
+    if (world[cell.x][cell.y+1].alive) neighbors++;//down
+    return neighbors;
 }
 
 int main(){
-    #define COLS 50
-    #define ROWS 50
     int screenWidth, screenHeight;
     screenWidth = 800; screenHeight = 500;
-    //int cols = screenWidth/10;int rows = screenHeight/10;//rows x cols = total cells
     Cell world[ROWS][COLS] = {0};
+    for (int i = 0; i < ROWS; i++) {
+        for (int j = 0; j < COLS; j++) {
+            world[i][j].x = i;
+            world[i][j].y = j;
+        }
+    }
 
     InitWindow(screenWidth,screenHeight,"BoilerPlate");
 
@@ -89,15 +72,10 @@ int main(){
             }
         }
         if (IsKeyPressed(KEY_N)){//count neighbors
-            for (int i = 0; i < ROWS; i++) {
-                for (int j = 0; j < COLS; j++) {
-                    world[i][j].alive = 0;
-                }
-            }
+            neighbors = ReturnNeighborCount(world[worldMousePosX][worldMousePosY],world);
         }
         for (int i = 0; i < ROWS; i++) {
             for (int j = 0; j < COLS; j++) {
-                //DrawRectangle(i*BLOCK_SIZE,j*BLOCK_SIZE,BLOCK_SIZE,BLOCK_SIZE,GRAY);
                 if(world[i][j].alive){
                     DrawRectangle(i*BLOCK_SIZE,j*BLOCK_SIZE,BLOCK_SIZE,BLOCK_SIZE,RED);
                 }else {
@@ -105,7 +83,7 @@ int main(){
                 }
             }
         }
-        //draw blocks
+        //draw transparent cursor
         DrawRectangle(mousePos.x,mousePos.y,BLOCK_SIZE,BLOCK_SIZE,CURSOR_COLOR);
 
         //debug/print
@@ -114,6 +92,11 @@ int main(){
         DrawText("Place two blocks, then (r)eset. Test again for 8 possible states.\nOnly test blocks[0] against block[1].", 20, 80, 20, RED);
         DrawText(TextFormat("neighbors: %d", neighbors), 50, 260, 20, RED);
         //DrawText(TextFormat("rows cols: %d %d", rows, cols), 50, 240, 20, RED);
+        //below makes sure worldMousePosX and Y line up with given cells x and y
+        DrawText(TextFormat("x y : %d %d",
+                            world[worldMousePosX][worldMousePosY].x,
+                            world[worldMousePosX][worldMousePosY].y
+        ), 50, 280, 20, RED);
         EndDrawing();
     }
     CloseWindow();
